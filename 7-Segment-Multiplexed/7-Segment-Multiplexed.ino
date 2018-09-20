@@ -66,7 +66,7 @@ void printContents() {
 // byte data[] = {0x81, 0xcf, 0x92, 0x86, 0xcc, 0xa4, 0xa0, 0x8f, 0x80, 0x84, 0x88, 0xe0, 0xb1, 0xc2, 0xb0, 0xb8};
 
 // 4-bit hex decoder for common cathode 7-segment display
-byte data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
+// byte data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
 
 void setup() {
 	pinMode(SHIFT_DATA, OUTPUT);
@@ -76,21 +76,25 @@ void setup() {
   pinMode(WRITE_EN, OUTPUT);
   Serial.begin(57600);
 
-  // Erase entire EEPROM
-  Serial.print("Erasing EEPROM");
-  for (int address = 0; address <= 2047; address += 1) {
-    writeEEPROM(address, 0xff);
-
-   if (address % 64 == 0) {
-     Serial.print(".");
-   }
-  }
-  Serial.println(" done");
-
-// Program 16 bytes
   Serial.println("Programming EEPROM");
-  for (int address = 0; address <= 15; address += 1) {
-    writeEEPROM(address, data[address]);
+
+  byte digits[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b }; //0-9
+
+  Serial.println("Programming ones place");
+  for (int value = 0; value < 255; value += 1) {
+    writeEEPROM(value, digits[value % 10]); //one's place
+  }
+  Serial.println("Programming tens place");
+  for (int value = 0; value < 255; value += 1) {
+    writeEEPROM(value + 256, digits[(value / 10) % 10]); //ten's place
+  }
+  Serial.println("Programming hundreds place");
+  for (int value = 0; value < 255; value += 1) {
+    writeEEPROM(value + 512, digits[(value / 100) % 10]); //hundreds's place
+  }
+  Serial.println("Programming sign");
+  for (int value = 0; value < 255; value += 1) {
+    writeEEPROM(value + 768, 0); //first 7 segment
   }
   Serial.println("Reading EEPROM");
   printContents();
@@ -101,20 +105,9 @@ void loop() {
 
 // 7 Segment display decoder binary => hex representation
 
-// d3 d2 d1 d0   a b c d e f g   hex
-//  0  0  0  0   0 0 0 0 0 0 1    01
-//  0  0  0  1   1 0 0 1 1 1 1    4f
-//  0  0  1  0   0 0 1 0 0 1 0    12
-//  0  0  1  1   0 0 0 0 1 1 0    06
-//  0  1  0  0   1 0 0 1 1 0 0    4c
-//  0  1  0  1   0 1 0 0 1 0 0    24
-//  0  1  1  0   0 1 0 0 0 0 0    20
-//  0  1  1  1   0 0 0 1 1 1 1    0f
-//  1  0  0  0   0 0 0 0 0 0 0    00
-//  1  0  0  1   0 0 0 0 1 0 0    04
-//  1  0  1  0   0 0 0 1 0 0 0    08
-//  1  0  1  1   1 1 0 0 0 0 0    60
-//  1  1  0  0   0 1 1 0 0 0 1    31
-//  1  1  0  1   1 0 0 0 0 1 0    42
-//  1  1  1  0   0 1 1 0 0 0 0    30
-//  1  1  1  1   0 1 1 1 0 0 0    38
+// 321
+// A10 A9 A8   A7 A6 A5 A4 A3 A2 A1 A0          D7 D6 D5 D4 D3 D2 D1 D0
+//   0  0  0    0  1  1  1  1  0  1  1    =>     0  1  0  0  1  1  1  1  =>  3
+//   0  0  1    0  1  1  1  1  0  1  1    =>     0  1  0  1  1  0  1  1  =>  2
+//   0  1  0    0  1  1  1  1  0  1  1    =>     0  0  0  0  0  0  1  1  =>  1
+//   0  1  1    0  1  1  1  1  0  1  1    =>     0  0  0  0  0  0  0  0  =>  -
